@@ -12,13 +12,13 @@ app = Flask(__name__, static_url_path='')
 
 
 
-@app.route('/')
-def root():
-    return app.send_static_file('index.html')
+# @app.route('/')
+# def root():
+#     return app.send_static_file('index.html')
 
 
 @app.route('/ngram', methods = ['GET','POST'])
-def ngram():
+def root():
 
     req_json = request.json
     print(req_json)
@@ -37,37 +37,36 @@ def ngram():
             corpus = request.form.get('corpus','eng_us_2012')
             query = request.form.get('query','feminism')
 
-    df = getNgrams(query, corpus, 1880, 2008, 0, False)[2]
+    startDate = 1880
+    endDate = 2008
 
-    type = "stackedAreaChart"
+    df = getNgrams(query, corpus, startDate, endDate, 0, False)[2]
+
+    type = query
     chart = stackedAreaChart(height=450,
-                         x_axis_format="", jquery_on_ready=False)
+                         x_axis_format="", y_axis_format="2f", jquery_on_ready=False)
 
 
-    chart.set_containerheader("\n\n<h2>" + type + "</h2>\n\n")
+    chart.set_containerheader("\n\n<h1>The term '" + type + "' as a percentage of all published American English words (1880-2008)</h1>\n\n")
 
-    extra_serie = {"tooltip": {},
-                "format": "4f"}
-    # extra_serie = {"tooltip": {"y_start": "There is ", "y_end": " calls"},
-    #            "format": "4f"}
+    extra_serie = {"tooltip": {"y_start": "", "y_end": " "}}
+
+
+    maxnum = df.max()[1]
 
     for value in df.columns.values:
         d=df[value]
         if (value != "year"):
-            chart.add_serie(name=value, y=d.values, x=d.keys(), extra=extra_serie )
+            chart.add_serie(name=value, y=(d.values/maxnum*100).astype("int"), x=d.keys(), extra=extra_serie )
         else:
             print "skipping year"
 
     chart.buildhtml()
     content = chart.htmlcontent
-    print content
+
     return content
 
-    # output_file.write(chart.htmlcontent)
-    #
-    # #close Html file
-    # output_file.close()
-    # return 'Hello World!'
+
 
 
 corpora = dict(eng_us_2012=17, eng_us_2009=5, eng_gb_2012=18, eng_gb_2009=6,
@@ -78,12 +77,7 @@ corpora = dict(eng_us_2012=17, eng_us_2009=5, eng_gb_2012=18, eng_gb_2009=6,
                ita_2012=22)
 
 def getNgrams(query, corpus, startYear, endYear, smoothing, caseInsensitive):
-    # query='Feminism'
-    # corpus='eng_us_2009'
-    # startYear= 1908
-    # endYear=2008
-    # smoothing = 2
-    # caseInsensitive=False
+
     params = dict(content=query, year_start=startYear, year_end=endYear,
                   corpus=corpora[corpus], smoothing=smoothing,
                   case_insensitive=caseInsensitive)
@@ -100,5 +94,8 @@ def getNgrams(query, corpus, startYear, endYear, smoothing, caseInsensitive):
     df.insert(0, 'year', range(startYear, endYear+1))
     df.index=df['year']
     return req.url, params['content'], df
+
+if __name__ == '__main__':
+    app.run()
 
 
